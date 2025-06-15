@@ -6,8 +6,8 @@ local symbols = require("whid.utils.symbols")
 
 function M.input()
 	local max = vim.api.nvim_buf_line_count(0)
-	local default_text = "默认文本"
-	local user_input = vim.fn.input({ prompt = "请输入: ", default = default_text })
+	local user_input = vim.fn.input({ prompt = "请输入: " })
+
 	vim.api.nvim_buf_set_option(0, "modifiable", true)
 	vim.api.nvim_buf_set_lines(0, -1, -1, false, { string.format("%s  %d. %s", symbols.uncheck, max, user_input) })
 	vim.api.nvim_buf_set_option(0, "modifiable", false)
@@ -71,22 +71,19 @@ end
 function M.toggle_delete()
 	local line = vim.api.nvim_win_get_cursor(0)[1] - 1
 	local content = vim.api.nvim_get_current_line()
-	for s in content:gmatch("%S", 1) do
-		print("sym" .. s)
+	local mc = content:match("~~(.-)~~")
+	if not mc then
+		content = string.format("~~%s~~", content)
+	else
+		content = mc
 	end
-	local status = code == symbols.uncheck and code or symbols.checked
-	local replace = status == symbols.uncheck and symbols.checked or symbols.uncheck
-	content = content:gsub(status, replace, 1)
 
-	print("content:" .. content)
 	vim.api.nvim_buf_set_option(0, "modifiable", true)
-	vim.api.nvim_buf_set_lines(0, line, line + 1, false, {
-		content,
-	})
+	vim.api.nvim_buf_set_lines(0, line, line + 1, false, { content })
 	vim.api.nvim_buf_set_option(0, "modifiable", false)
 end
 
-function M.delete()
+function M.pyhsical_delete()
 	vim.api.nvim_buf_set_option(0, "modifiable", true)
 	vim.cmd("delete")
 	vim.api.nvim_buf_set_option(0, "modifiable", false)
@@ -96,9 +93,9 @@ function M.setup(cfg)
 	if type(cfg) ~= "table" then
 		cfg = {}
 	end
-	M.save_file = cfg.save_file or "./.vscode/todo.list"
+	M.save_file = cfg.save_file or "./.vscode/todo.md"
 
-	win.open("todo", "TODO List")
+	win.open("markdown", "TODO List")
 	M.load()
 	win.init_cursor(1)
 end

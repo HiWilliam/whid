@@ -10,8 +10,8 @@ local todo_maps = {
 	{ "n", "i", todo.input, { silent = true, noremap = true, nowait = true, buffer = true } },
 	{ "n", "w", todo.save, { silent = true, noremap = true, nowait = true, buffer = true } },
 	{ "n", "r", todo.load, { silent = true, noremap = true, nowait = true, buffer = true } },
-	{ "n", "d", todo.toggle_delete, { silent = true, noremap = true, nowait = true, buffer = true } },
-	--{ "n", "dd", todo.delete, { silent = true, noremap = true, nowait = true, buffer = true } },
+	{ "n", "ds", todo.toggle_delete, { silent = true, noremap = true, nowait = true, buffer = true } },
+	{ "n", "dd", todo.pyhsical_delete, { silent = true, noremap = true, nowait = true, buffer = true } },
 	{ "n", "c", todo.update, { silent = true, noremap = true, nowait = true, buffer = true } },
 	{ "n", "m", todo.toggle_check, { silent = true, noremap = true, nowait = true, buffer = true } },
 }

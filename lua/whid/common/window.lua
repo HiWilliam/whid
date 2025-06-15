@@ -76,7 +76,6 @@ function M.update(data)
 		data[k] = string.format("%s", v)
 	end
 	api.nvim_buf_set_lines(buf, 1, -1, false, data)
-	api.nvim_buf_add_highlight(buf, -1, "whidSubHeader", 1, 0, -1)
 	api.nvim_buf_set_option(buf, "modifiable", false)
 end
 
