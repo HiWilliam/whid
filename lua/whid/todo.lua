@@ -3,13 +3,16 @@ local M = {}
 local win = require("whid.common.window")
 local file = require("whid.utils.file")
 local symbols = require("whid.utils.symbols")
+local select = require("whid.common.popmenu")
 
 function M.input()
-	local max = vim.api.nvim_buf_line_count(0)
 	local user_input = vim.fn.input({ prompt = "请输入: " })
+	if not user_input then
+		return
+	end
 
 	vim.api.nvim_buf_set_option(0, "modifiable", true)
-	vim.api.nvim_buf_set_lines(0, -1, -1, false, { string.format("%s  %d. %s", symbols.uncheck, max, user_input) })
+	vim.api.nvim_buf_set_lines(0, -1, -1, false, { string.format("%s %s", symbols.uncheck.code, user_input) })
 	vim.api.nvim_buf_set_option(0, "modifiable", false)
 end
 
@@ -46,26 +49,31 @@ end
 function M.update()
 	local line = vim.api.nvim_win_get_cursor(0)[1] - 1
 	local content = vim.api.nvim_get_current_line()
-	content = vim.fn.input({ default = content })
+	local input = vim.fn.input({ default = content })
+	if not input or input == "" then
+		input = content
+	end
+
 	vim.api.nvim_buf_set_option(0, "modifiable", true)
-	vim.api.nvim_buf_set_lines(0, line, line + 1, false, { content })
+	vim.api.nvim_buf_set_lines(0, line, line + 1, false, { input })
 	vim.api.nvim_buf_set_option(0, "modifiable", false)
 end
 
 function M.toggle_check()
 	local line = vim.api.nvim_win_get_cursor(0)[1] - 1
 	local content = vim.api.nvim_get_current_line()
-	local code, _ = content:match(symbols.uncheck)
-	local status = code == symbols.uncheck and code or symbols.checked
-	local replace = status == symbols.uncheck and symbols.checked or symbols.uncheck
+	local code, _ = content:match(symbols.uncheck.code)
+	local status = code == symbols.uncheck.code and code or symbols.checked.code
+	local replace = status == symbols.uncheck.code and symbols.checked.code or symbols.uncheck.code
 	content = content:gsub(status, replace, 1)
 
-	print("content:" .. content)
 	vim.api.nvim_buf_set_option(0, "modifiable", true)
 	vim.api.nvim_buf_set_lines(0, line, line + 1, false, {
 		content,
 	})
 	vim.api.nvim_buf_set_option(0, "modifiable", false)
+
+	select.SymbolSelect()
 end
 
 function M.toggle_delete()

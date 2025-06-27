@@ -22,7 +22,9 @@ function M.setup()
 	end, {})
 
 	vim.api.nvim_create_user_command("TodoList", function()
-		todo.setup({})
+		todo.setup({
+			save_file = "/root/todos/default.md",
+		})
 		km.set(todo_maps)
 	end, {})
 end
