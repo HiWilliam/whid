@@ -2,7 +2,8 @@ local M = {}
 
 local symbols = require("whid.utils.symbols")
 
-function M.SymbolSelect()
+--- @param callback function
+function M.SymbolSelect(callback)
 	local list = {}
 	for _, v in pairs(symbols) do
 		table.insert(list, v)
@@ -10,13 +11,11 @@ function M.SymbolSelect()
 	vim.ui.select(list, {
 		prompt = "Choose an option:",
 		format_item = function(item)
-			return string.format("%s %s //%s", item.name, item.code, item.desc)
+			return string.format("%s %s", item.name, item.code)
 		end,
 	}, function(choice)
 		if choice then
-			print("You selected:", choice)
-		else
-			print("Cancelled!")
+			callback(choice)
 		end
 	end)
 end

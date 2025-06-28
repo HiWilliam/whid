@@ -25,6 +25,7 @@ function M.save(filename, data)
 	end
 
 	for _, v in ipairs(data) do
+		local res = nil
 		res, err = f:write(v:match("^%s*(.*)") .. "\n")
 		if not res then
 			f:close()

@@ -14,16 +14,17 @@ local todo_maps = {
 	{ "n", "dd", todo.pyhsical_delete, { silent = true, noremap = true, nowait = true, buffer = true } },
 	{ "n", "c", todo.update, { silent = true, noremap = true, nowait = true, buffer = true } },
 	{ "n", "m", todo.toggle_check, { silent = true, noremap = true, nowait = true, buffer = true } },
+	{ "n", "u", todo.undo, { silent = true, noremap = true, nowait = true, buffer = true } },
 }
 -- Main WHID command
-function M.setup()
+function M.setup(cfg)
 	vim.api.nvim_create_user_command("Whid", function()
 		require("whid.whid"):whid()
 	end, {})
 
 	vim.api.nvim_create_user_command("TodoList", function()
 		todo.setup({
-			save_file = "/root/todos/default.md",
+			save_file = cfg.save_file or "/root/todos/default.md",
 		})
 		km.set(todo_maps)
 	end, {})

@@ -18,6 +18,7 @@ function M.open(filetype, title)
 
 	api.nvim_buf_set_option(buf, "bufhidden", "wipe")
 	api.nvim_buf_set_option(buf, "filetype", filetype)
+	api.nvim_buf_set_option(buf, "undolevels", 1000)
 
 	local width = api.nvim_get_option("columns")
 	local height = api.nvim_get_option("lines")
