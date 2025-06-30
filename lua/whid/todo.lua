@@ -6,21 +6,21 @@ local symbols = require("whid.utils.symbols")
 local select = require("whid.common.popmenu")
 
 function M.input()
-	local user_input = vim.fn.input({ prompt = "请输入: " })
-	local count = vim.api.nvim_buf_line_count(0)
-	if not user_input then
-		return
-	end
+	win.update_buf(function()
+		local user_input = vim.fn.input({ prompt = "请输入: " })
+		local count = vim.api.nvim_buf_line_count(0)
+		if not user_input then
+			return
+		end
 
-	vim.api.nvim_buf_set_option(0, "modifiable", true)
-	vim.api.nvim_buf_set_lines(
-		0,
-		-1,
-		-1,
-		false,
-		{ string.format("%s %d. %s", symbols.uncheck.code, count, user_input) }
-	)
-	vim.api.nvim_buf_set_option(0, "modifiable", false)
+		vim.api.nvim_buf_set_lines(
+			0,
+			-1,
+			-1,
+			false,
+			{ string.format("%s %d. %s", symbols.uncheck.code, count, user_input) }
+		)
+	end)
 end
 
 function M.load()
@@ -56,26 +56,26 @@ function M.save()
 end
 
 function M.update()
-	local line = vim.api.nvim_win_get_cursor(0)[1] - 1
-	local content = vim.api.nvim_get_current_line()
-	local slices = string.gmatch(content, "%S+")
-	local items = {}
-	for word in slices do
-		table.insert(items, word)
-	end
+	win.update_buf(function()
+		local line = vim.api.nvim_win_get_cursor(0)[1] - 1
+		local content = vim.api.nvim_get_current_line()
+		local slices = string.gmatch(content, "%S+")
+		local items = {}
+		for word in slices do
+			table.insert(items, word)
+		end
 
-	if #items > 2 then
-		content = table.concat({ unpack(items, 3) }, " ")
-	end
+		if #items > 2 then
+			content = table.concat({ unpack(items, 3) }, " ")
+		end
 
-	local input = vim.fn.input({ default = content })
-	if not input or input == "" then
-		input = content
-	end
+		local input = vim.fn.input({ default = content })
+		if not input or input == "" then
+			input = content
+		end
 
-	vim.api.nvim_buf_set_option(0, "modifiable", true)
-	vim.api.nvim_buf_set_lines(0, line, line + 1, false, { string.format("%s %d. %s", items[1], items[2], input) })
-	vim.api.nvim_buf_set_option(0, "modifiable", false)
+		vim.api.nvim_buf_set_lines(0, line, line + 1, false, { string.format("%s %d. %s", items[1], items[2], input) })
+	end)
 end
 
 function M.toggle_check()

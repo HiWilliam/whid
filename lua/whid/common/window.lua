@@ -66,7 +66,7 @@ function M.open(filetype, title)
 end
 
 --- Update content in buffer
---- @param data any
+--- @param data string[]
 function M.update(data)
 	api.nvim_buf_set_option(buf, "modifiable", true)
 
@@ -77,6 +77,13 @@ function M.update(data)
 		data[k] = string.format("%s", v)
 	end
 	api.nvim_buf_set_lines(buf, 1, -1, false, data)
+	api.nvim_buf_set_option(buf, "modifiable", false)
+end
+
+---@param func function
+function M.update_buf(func)
+	api.nvim_buf_set_option(buf, "modifiable", true)
+	func()
 	api.nvim_buf_set_option(buf, "modifiable", false)
 end
 
