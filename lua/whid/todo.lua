@@ -1,53 +1,137 @@
 local M = {}
 
 local win = require("whid.common.window")
-local file = require("whid.utils.file")
 local symbols = require("whid.utils.symbols")
 local select = require("whid.common.popmenu")
+local json = require("whid.utils.json")
+
+local line_format = "%s %d. [%s]: %s"
+
+local is_preview = false
+
+---@return string
+local function genUniqueId()
+	local time = vim.loop.hrtime()
+	local rand = math.random(10000, 99999)
+	return string.format("uv_%s_%d", time, rand)
+end
+
+---@return task?
+local function getInput()
+	local user_input = vim.fn.input({ prompt = "请输入: " })
+	if #user_input == 0 then
+		return nil
+	end
+	local module = user_input:match("%[(.-)%]") or "default"
+	local title = user_input:match("%]:*%s*(.*)") or user_input
+	---@type task
+	local task = {
+		id = genUniqueId(),
+		module = module,
+		title = title,
+		status = symbols.uncheck.name,
+		is_deleted = false,
+	}
+	return task
+end
 
 function M.input()
-	win.update_buf(function()
-		local user_input = vim.fn.input({ prompt = "请输入: " })
-		local count = vim.api.nvim_buf_line_count(0)
-		if not user_input then
+	win.update_line(function()
+		local task = getInput()
+		if task == nil then
 			return
 		end
+		local count = vim.api.nvim_buf_line_count(0)
 
 		vim.api.nvim_buf_set_lines(
 			0,
 			-1,
 			-1,
 			false,
-			{ string.format("%s %d. %s", symbols.uncheck.code, count, user_input) }
+			{ string.format(line_format, symbols.uncheck.code, count, task.module, task.title) }
 		)
+
+		table.insert(json.tasks, task)
 	end)
 end
 
-function M.load()
-	local res = file.read(M.save_file)
-	if not res then
+function M.input_after()
+	local task = getInput()
+	if task == nil then
+		return
+	end
+	local index = vim.api.nvim_win_get_cursor(0)[1] - 1
+	table.insert(json.tasks, index + 1, task)
+	M.load()
+end
+
+function M.input_before()
+	local task = getInput()
+	if task == nil then
+		return
+	end
+	local index = vim.api.nvim_win_get_cursor(0)[1] - 1
+	index = index - 1 <= 0 and 1 or index
+	table.insert(json.tasks, index, task)
+	M.load()
+end
+
+function M.toggle_preview()
+	local index = vim.api.nvim_win_get_cursor(0)[1] - 1
+	local task = json.tasks[index]
+	if task == nil then
+		vim.notify("任务不存在" .. index, vim.log.levels.ERROR)
 		return
 	end
 
+	if is_preview then
+		M.load()
+		is_preview = false
+	else
+		M.preview(task)
+		is_preview = true
+	end
+end
+---@param task task
+function M.preview(task)
+	local status_code = symbols.get_code(task.status)
+	local label_codes = symbols.get_labels_code(task.labels or {})
+	local labels = #label_codes > 0 and table.concat(label_codes) or symbols.blu_circle.code
+
+	local content = {
+		---string.format("### %s", task.title),
+		---string.format("** 模块: ** %s", task.module),
+		---string.format("* 状态: * %s", status_code),
+		---string.format("* 标签: * %s", labels),
+		string.format("%s", task.content or task.title),
+	}
+	win.update(content)
+end
+
+function M.load()
 	local lines = {}
-	for line in res:gmatch("[^\n]+") do
+	for k, task in ipairs(json.tasks) do
+		local status_code = symbols.get_code(task.status)
+		local line = string.format(line_format, status_code, k, task.module, task.title)
+		if task.is_deleted then
+			line = string.format("~~%s~~", line)
+		end
+
 		table.insert(lines, line)
 	end
 
-	lines = M.reorder(lines)
-
 	win.update(lines)
+
+	for k, v in ipairs(json.tasks) do
+		local labels = symbols.get_labels_code(v.labels ~= nil and v.labels or { symbols.blu_circle.name })
+		win.set_right_icons(k, labels)
+	end
 end
 
 function M.save()
-	local content = vim.api.nvim_buf_get_lines(0, 1, -1, false)
-	if #content == 0 then
-		vim.notify("No content")
-		return
-	end
+	local err = json.save_all(M.save_file)
 
-	local err = file.save(M.save_file, content)
-	if err then
+	if err ~= nil then
 		vim.notify("Save failed:" .. err, vim.log.levels.ERROR)
 		return
 	end
@@ -56,87 +140,91 @@ function M.save()
 end
 
 function M.update()
-	win.update_buf(function()
-		local line = vim.api.nvim_win_get_cursor(0)[1] - 1
-		local content = vim.api.nvim_get_current_line()
-		local slices = string.gmatch(content, "%S+")
-		local items = {}
-		for word in slices do
-			table.insert(items, word)
-		end
+	local index = vim.api.nvim_win_get_cursor(0)[1] - 1
+	local task = json.tasks[index]
+	local input = vim.fn.input({ default = task.title })
+	if not input or input == "" then
+		input = task.title
+	end
 
-		if #items > 2 then
-			content = table.concat({ unpack(items, 3) }, " ")
-		end
+	local status_code = symbols.get_code(task.status)
+	win.update_line(function()
+		vim.api.nvim_buf_set_lines(
+			0,
+			index,
+			index + 1,
+			false,
+			{ string.format(line_format, status_code, index, task.module, input) }
+		)
+	end)
 
-		local input = vim.fn.input({ default = content })
-		if not input or input == "" then
-			input = content
-		end
+	json.tasks[index].title = input
+end
 
-		vim.api.nvim_buf_set_lines(0, line, line + 1, false, { string.format("%s %d. %s", items[1], items[2], input) })
+function M.mark_status()
+	local index = vim.api.nvim_win_get_cursor(0)[1] - 1
+	local task = json.tasks[index]
+	select.StatusSelect(function(choice)
+		win.update_line(function()
+			vim.api.nvim_buf_set_lines(0, index, index + 1, false, {
+				string.format(line_format, choice.code, index, task.module, task.title),
+			})
+		end)
+		json.tasks[index].status = choice.name
+		--- 同时更新virtu_text 防止错位
+		local labels = symbols.get_labels_code(task.labels ~= nil and task.labels or { symbols.blu_circle.name })
+		win.set_right_icons(index, labels)
 	end)
 end
 
-function M.toggle_check()
-	select.SymbolSelect(function(choice)
-		local line = vim.api.nvim_win_get_cursor(0)[1] - 1
-		local content = vim.api.nvim_get_current_line()
-		print(string.format("choice: name: %s, code: %s, desc: %s ", choice.name, choice.code, choice.desc))
-		content = content:gsub("[^\128-\191][\128-\191]*", choice.code, 1)
-
-		vim.api.nvim_buf_set_option(0, "modifiable", true)
-		vim.api.nvim_buf_set_lines(0, line, line + 1, false, {
-			content,
-		})
-		vim.api.nvim_buf_set_option(0, "modifiable", false)
+function M.mark_label()
+	local index = vim.api.nvim_win_get_cursor(0)[1] - 1
+	select.LabelSelect(function(choice)
+		win.update_line(function()
+			win.set_right_icons(index, { choice.code })
+		end)
+		json.tasks[index].labels = { choice.name }
 	end)
 end
 
 function M.toggle_delete()
-	local line = vim.api.nvim_win_get_cursor(0)[1] - 1
-	local content = vim.api.nvim_get_current_line()
-	local mc = content:match("~~(.-)~~")
-	if not mc then
-		content = string.format("~~%s~~", content)
-	else
-		content = mc
-	end
+	local index = vim.api.nvim_win_get_cursor(0)[1] - 1
+	local task = json.tasks[index]
 
-	vim.api.nvim_buf_set_option(0, "modifiable", true)
-	vim.api.nvim_buf_set_lines(0, line, line + 1, false, { content })
-	vim.api.nvim_buf_set_option(0, "modifiable", false)
+	local format = line_format
+	task.is_deleted = not task.is_deleted
+	if task.is_deleted then
+		format = "~~" .. line_format .. "~~"
+	end
+	local status_code = symbols.get_code(task.status)
+
+	win.update_line(function()
+		vim.api.nvim_buf_set_lines(
+			0,
+			index,
+			index + 1,
+			false,
+			{ string.format(format, status_code, index, task.module, task.title) }
+		)
+	end)
+
+	json.tasks[index] = task
 end
 
 function M.pyhsical_delete()
-	vim.api.nvim_buf_set_option(0, "modifiable", true)
-	vim.cmd("delete")
+	win.update_line(function()
+		local index = vim.api.nvim_win_get_cursor(0)[1] - 1
+		vim.cmd("delete")
+		table.remove(json.tasks, index)
 
-	local lines = vim.api.nvim_buf_get_lines(0, 1, -1, false)
-
-	lines = M.reorder(lines)
-
-	win.update(lines)
-
-	vim.api.nvim_buf_set_option(0, "modifiable", false)
-end
-
---- @param  data string[]
---- @return string[]
-function M.reorder(data)
-	local result = {}
-	for k, v in ipairs(data) do
-		local line = v:gsub("%d+", k, 1)
-		table.insert(result, line)
-	end
-
-	return result
+		M.load()
+	end)
 end
 
 function M.undo()
-	vim.api.nvim_buf_set_option(0, "modifiable", true)
-	vim.cmd("undo")
-	vim.api.nvim_buf_set_option(0, "modifiable", false)
+	win.update_line(function()
+		vim.cmd("undo")
+	end)
 end
 
 function M.setup(cfg)
@@ -144,6 +232,7 @@ function M.setup(cfg)
 		cfg = {}
 	end
 	M.save_file = cfg.save_file or "./.vscode/todo.md"
+	json.load_all(M.save_file)
 
 	win.open("markdown", "TODO List")
 	M.load()

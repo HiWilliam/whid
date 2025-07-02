@@ -3,6 +3,8 @@ local M = {}
 local api = vim.api
 local buf, win
 
+local virtu_text_ids = {}
+
 local function center(str)
 	local width = api.nvim_win_get_width(0)
 	local shift = math.floor(width / 2) - math.floor(string.len(str) / 2)
@@ -55,7 +57,7 @@ function M.open(filetype, title)
 	table.insert(border_lines, "╚" .. string.rep("═", win_width) .. "╝")
 	api.nvim_buf_set_lines(border_buf, 0, -1, false, border_lines)
 
-	local border_win = api.nvim_open_win(border_buf, true, border_opts)
+	api.nvim_open_win(border_buf, true, border_opts)
 	win = api.nvim_open_win(buf, true, opts)
 	api.nvim_command('au BufWipeout <buffer> exe "silent bwipeout! "' .. border_buf)
 
@@ -81,7 +83,7 @@ function M.update(data)
 end
 
 ---@param func function
-function M.update_buf(func)
+function M.update_line(func)
 	api.nvim_buf_set_option(buf, "modifiable", true)
 	func()
 	api.nvim_buf_set_option(buf, "modifiable", false)
@@ -104,6 +106,24 @@ end
 function M.move_cursor()
 	local new_pos = math.max(4, api.nvim_win_get_cursor(win)[1] - 1)
 	api.nvim_win_set_cursor(win, { new_pos, 0 })
+end
+
+function M.set_right_icons(line_num, labels)
+	local line = api.nvim_buf_get_lines(buf, line_num, line_num + 1, false)[1] or ""
+	local line_length = #line
+
+	local ns_id = api.nvim_create_namespace("todo")
+
+	if virtu_text_ids[line_num] ~= nil then
+		api.nvim_buf_del_extmark(buf, ns_id, virtu_text_ids[line_num])
+	end
+
+	-- 添加虚拟文本（右对齐）
+	virtu_text_ids[line_num] = api.nvim_buf_set_extmark(buf, ns_id, line_num, line_length, {
+		virt_text = { { table.concat(labels), "Label" } },
+		virt_text_pos = "right_align", -- 关键参数：右对齐
+		hl_mode = "combine",
+	})
 end
 
 return M

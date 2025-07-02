@@ -36,4 +36,18 @@ function M.save(filename, data)
 	f:close()
 end
 
+---@param filename string
+---@param data string?
+---@return string?
+function M.write(filename, data)
+	local f, err = io.open(filename, "w")
+	if not f then
+		return err
+	end
+
+	_, err = f:write(data)
+	f:close()
+	return err
+end
+
 return M

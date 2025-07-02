@@ -22,6 +22,12 @@ local win = require("whid.common.window")
 M.mappings = {
 	{ "n", "q", win.close, { silent = true, noremap = true, nowait = true, buffer = true } },
 }
+M.unmappings = {
+	{ "n", "<C-h>" },
+	{ "n", "<C-k>" },
+	{ "n", "<C-j>" },
+	{ "n", "<C-l>" },
+}
 
 --- @param maps KeymapDefinition[]
 function M.set(maps)
@@ -33,6 +39,10 @@ function M.set(maps)
 
 	for _, v in ipairs(M.mappings) do
 		vim.keymap.set(unpack(v))
+	end
+
+	for _, v in ipairs(M.unmappings) do
+		vim.keymap.set(v[1], v[2], "", { silent = true, noremap = true, nowait = true, buffer = true })
 	end
 end
 
