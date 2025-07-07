@@ -20,8 +20,11 @@ local win = require("whid.common.window")
 
 ---@type KeymapDefinition[]
 M.mappings = {
-	{ "n", "q", win.close, { silent = true, noremap = true, nowait = true, buffer = true } },
+	{ "n", "q", win.close, { desc = "Close Window" } },
 }
+
+local mapping_opts = { silent = true, noremap = true, nowait = true, buffer = true }
+
 M.unmappings = {
 	{ "n", "<C-h>" },
 	{ "n", "<C-k>" },
@@ -31,8 +34,13 @@ M.unmappings = {
 
 --- @param maps KeymapDefinition[]
 function M.set(maps)
+	for _, v in ipairs(M.mappings) do
+		v[4] = vim.tbl_extend("force", mapping_opts, v[4])
+	end
+
 	if #maps ~= 0 then
 		for _, v in ipairs(maps) do
+			v[4] = vim.tbl_extend("force", mapping_opts, v[4])
 			table.insert(M.mappings, v)
 		end
 	end
@@ -42,7 +50,7 @@ function M.set(maps)
 	end
 
 	for _, v in ipairs(M.unmappings) do
-		vim.keymap.set(v[1], v[2], "", { silent = true, noremap = true, nowait = true, buffer = true })
+		vim.keymap.set(v[1], v[2], "", mapping_opts)
 	end
 end
 

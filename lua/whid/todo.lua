@@ -138,14 +138,25 @@ function M.save()
 
 	vim.notify("Save successed")
 end
-
-function M.update()
-	local index = vim.api.nvim_win_get_cursor(0)[1] - 1
-	local task = json.tasks[index]
-	local input = vim.fn.input({ default = task.title })
-	if not input or input == "" then
-		input = task.title
+---@param key string
+function M.update(key)
+	local enable_updates = {
+		module = true,
+		title = true,
+	}
+	if not enable_updates[key] then
+		vim.notify("Error Update Key", vim.log.levels.ERROR)
+		return
 	end
+
+	local index = win.get_current_line()
+	local task = json.tasks[index]
+	local input = vim.fn.input({ default = task[key] })
+	if not input or input == "" then
+		input = task[key]
+	end
+
+	json.tasks[index][key] = input
 
 	local status_code = symbols.get_code(task.status)
 	win.update_line(function()
@@ -154,11 +165,9 @@ function M.update()
 			index,
 			index + 1,
 			false,
-			{ string.format(line_format, status_code, index, task.module, input) }
+			{ string.format(line_format, status_code, index, task.module, task.title) }
 		)
 	end)
-
-	json.tasks[index].title = input
 end
 
 function M.mark_status()
@@ -225,6 +234,26 @@ function M.undo()
 	win.update_line(function()
 		vim.cmd("undo")
 	end)
+end
+
+---@param index string
+function M.swap(index)
+	if not win.is_open() then
+		return
+	end
+	local target = tonumber(index)
+	if not target then
+		vim.notify("请输入数字类型", vim.log.levels.ERROR)
+		return
+	end
+
+	if target <= 0 or target > #json.tasks then
+		vim.notify(string.format("参数范围为(0, %d]", #json.tasks), vim.log.levels.ERROR)
+		return
+	end
+	local current = win.get_current_line()
+	json.tasks[target], json.tasks[current] = json.tasks[current], json.tasks[target]
+	M.load()
 end
 
 function M.setup(cfg)

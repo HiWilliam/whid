@@ -2,6 +2,7 @@ local M = {}
 
 local api = vim.api
 local buf, win
+local is_open = false
 
 local virtu_text_ids = {}
 
@@ -65,6 +66,8 @@ function M.open(filetype, title)
 
 	api.nvim_buf_set_lines(buf, 0, -1, false, { center(title), "", "" })
 	api.nvim_buf_add_highlight(buf, -1, "WhidHeader", 0, 0, -1)
+
+	is_open = true
 end
 
 --- Update content in buffer
@@ -94,6 +97,7 @@ function M.init_cursor(line)
 end
 
 function M.close()
+	is_open = false
 	api.nvim_win_close(win, true)
 end
 
@@ -124,6 +128,15 @@ function M.set_right_icons(line_num, labels)
 		virt_text_pos = "right_align", -- 关键参数：右对齐
 		hl_mode = "combine",
 	})
+end
+
+---@return integer
+function M.get_current_line()
+	return api.nvim_win_get_cursor(win)[1] - 1
+end
+
+function M.is_open()
+	return is_open
 end
 
 return M
