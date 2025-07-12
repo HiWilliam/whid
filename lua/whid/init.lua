@@ -32,6 +32,7 @@ local todo_maps = {
 	{ "n", "ml", todo.mark_label, { desc = "Mark task label with selected item" } },
 	{ "n", "u", todo.undo, { desc = "Undo latest operation" } },
 	{ "n", "p", todo.toggle_preview, { desc = "Toggle preview task detail" } },
+	{ "n", "g", function(opts) end, { desc = "Toggle preview task detail" } },
 }
 -- Main WHID command
 function M.setup(cfg)
