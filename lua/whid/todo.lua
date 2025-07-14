@@ -256,6 +256,49 @@ function M.swap(index)
 	M.load()
 end
 
+function M.goto()
+    local timeout = 500  -- 超时时间（毫秒）
+    local start_time = vim.loop.now()
+    local num_str = ""
+
+    while (vim.loop.now() - start_time) < timeout do
+        local char = vim.fn.getchar(0)  -- 非阻塞获取
+        
+        if char ~= 0 then  -- 有按键输入
+            if type(char) == 'number' then
+                char = string.char(char)
+            end
+            
+            if char:match('%d') then
+                num_str = num_str .. char  -- 追加数字
+                start_time = vim.loop.now()  -- 重置超时计时
+            else
+                -- 遇到非数字键，返回原始功能
+                return 'g' .. num_str .. char
+            end
+        else
+            vim.wait(10)  -- 小延迟防止CPU占用过高
+        end
+    end
+    
+    if #num_str <= 0 then
+        return
+    end
+
+    local target = tonumber(num_str)
+    if not target then
+        vim.notify("请输入数字类型", vim.log.level.ERROR)
+        return
+    end
+
+    if target <= 0 or target > #json.tasks then
+        vim.notify(string.format("参数范围为(0, %d]", #json.tasks), vim.log.levels.ERROR)
+		return
+    end
+
+    win.move_cursor(target+1, 0)
+end
+
 function M.setup(cfg)
 	if type(cfg) ~= "table" then
 		cfg = {}
@@ -265,7 +308,7 @@ function M.setup(cfg)
 
 	win.open("markdown", "TODO List")
 	M.load()
-	win.init_cursor(1)
+	win.init_cursor(2)
 end
 
 return M
